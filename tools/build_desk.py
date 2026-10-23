@@ -12,8 +12,8 @@
     핵심매체(원본 CORE_MEDIA_*, check 0-41과 같은 목록)가 3곳 이상이면 남긴다(CORE_MIN).
     원본 check는 같은 제목 전재 매체까지 DB에서 세지만 화면 데이터엔 전재 매체 목록이 없다 — 원본판 재생 277묶음 중 275개가
     같은 판정(10/23, 다른 2개는 전재 매체만으로 3곳을 넘은 것).
-  - 노컷: 묶음 안에 노컷 기출고(nc)나 노컷 기사가 있으면 기출고 줄이 그대로 뜨고, 없으면 대표 줄에 nm(이유 문구)을 달아
-    페이지가 '노컷 미출고' 표시를 그린다(원본 render_page 0-74 자리).
+  - 노컷: 각 판의 '노컷 기출고' 줄(nc)이 그대로 뜬다. 미출고 표시는 하지 않는다(0-75 — 사용자 10/23 11:03 "노컷 미출고가 이렇게
+    강조될 필요는 없겠어. 기처리 된 것만 다른 페이지처럼 써주자." 0-74 첫 판엔 빨간 '노컷 미출고' 태그가 있었다).
   - 여러 판에 같은 기사가 걸리면(복지부·노동부 공동 발표 등) 보고 안에서 먼저 나온 섹션에만 둔다(링크 기준).
   - 각 판이 접어 둔 묶음(관련 약함·교육청 '다른 지역' — 묶음 기사 전부 wk)은 [단독]이 아니면 고르지 않는다
     (첫 시험에서 '두산연강재단 과학교사 학술시찰' 같은 보도자료가 핵심매체 4곳으로 올라왔다). 고른 묶음은 wk를 지워 전부 펼친다.
@@ -44,8 +44,6 @@ PAGES = [
 ]
 SKIP_GROUPS = {"CBS"}          # 김광일판 회사 기사 섹션 — 정책부 출입처가 아님
 CORE_MIN = 3                   # 원본 CHECK_CORE_SPREAD_MIN과 같은 값
-NM_DESC = ("같은 사안의 노컷뉴스 기사를 찾지 못한 핵심 묶음입니다. 노컷 기사는 각 기자 판이 모은 기사 안에서만 찾으므로, "
-           "출입처 검색어에 안 걸린 노컷 기사가 있으면 기출고인데도 미출고로 보일 수 있습니다.")
 
 
 def load_pages(local=None):
@@ -142,8 +140,6 @@ def build(pages, now):
                         items = []
                         for it in clu:
                             it = {k: v for k, v in it.items() if k != "wk"}
-                            if nm:
-                                it["nm"] = nm
                             items.append(it)
                         remap[(ps, pg, pc)] = (ns, None, len(cls))
                         cls.append(items)
@@ -174,7 +170,7 @@ def build(pages, now):
         reports.append({k: v for k, v in brep.items() if k not in ("segments", "all", "byline")}
                        | {"segments": segs, "all": all_out})
     last = max((d.get("last_seen") or "" for _r, _w, _t, d in pages), default="")
-    return {"generated": now.isoformat(), "last_seen": last, "reports": reports, "nm": NM_DESC,
+    return {"generated": now.isoformat(), "last_seen": last, "reports": reports,
             "src": [{"repo": r, "who": w, "team": t, "gen": d.get("generated", "")} for r, w, t, d in pages]}
 
 
@@ -189,7 +185,7 @@ def main():
     added, removed = m.archive_past_reports(data, now, rp.LIVE_DIR)
     for r in data["reports"]:
         print(r["title"], "| 묶음", sum(len(g["clusters"]) for s in r["segments"] for g in s["groups"]),
-              "| 미출고", sum(1 for s in r["segments"] for g in s["groups"] for c in g["clusters"] if c[0].get("nm")))
+              "| 노컷 기출고", sum(1 for s in r["segments"] for g in s["groups"] for c in g["clusters"] if any(is_nocut(x) for x in c)))
     print(f"판 {len(pages)}/{len(PAGES)} · 지난 보고 +{added} -{removed}")
 
 

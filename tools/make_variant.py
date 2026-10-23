@@ -33,6 +33,8 @@ REPLACEMENTS = [
     (RP, '<button type="button" id="sync" class="sync off"',
          '<button type="button" id="sync" class="sync off" style="display:none"', 1, False),
     (RP, "<title>뉴스레이다</title>", "<title>뉴스레이다 · 정책부</title>", 1, False),
+    # 0-75: 머리줄 판 주인(사용자 10/23 "이 페이지가 누구의 판인지 각자의 이름을 써주면 좋겠어. 출입처명도 간략히")
+    (RP, '<span class="who">김광일<span class="whob"> (과학·방송·경쟁 담당)</span></span>', '<span class="who">정책부장<span class="whob"> (경제·사회정책팀)</span></span>', 1, False),
     (RP, "document.title = '뉴스레이다 · ' + r.title;", "document.title = '뉴스레이다(정책부) · ' + r.title;", 1, False),
     # 본인 기사 섹션이 없는 판 — 꼬리말의 '맨 끝 섹션' 설명을 정책부장판 설명으로 바꾼다.
     (RP, r"legendItem\('맨 끝 섹션', '[^']*'\) \+",
