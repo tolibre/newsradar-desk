@@ -1,0 +1,50 @@
+name: newsradar-desk
+
+# 뉴스레이다 정책부장판. 원본: tolibre/news-monitor.
+# 수집하지 않는다 — 경제정책팀·사회정책팀 열 판의 docs/live/data.json을 읽어 핵심 묶음만 합친다(tools/build_desk.py).
+# 화면(render_page.py)과 라이브러리(news_monitor.py)는 tools/make_variant.py가 원본에서 생성한다 — 직접 고치지 말 것.
+#
+# 실행은 원본과 같이 외부 스케줄러(cron-job.org)가 workflow_dispatch로 부른다.
+# GitHub Actions 자체 schedule은 쓰지 않는다(원본에서 신뢰 불가로 검증됨).
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: '실행 모드(build만 있음 — 다른 판 잡과 같은 body를 받아도 되게 둔다)'
+        required: false
+        default: 'build'
+        type: string
+
+concurrency:
+  group: newsradar-desk
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v7
+
+      - name: 파이썬 설치
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: 열 판 데이터 합치기
+        run: python tools/build_desk.py
+
+      - name: 페이지 커밋 (GitHub Pages 갱신)
+        run: |
+          git config user.name "news-monitor-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs/
+          if git diff --cached --quiet; then
+            echo "변경 없음"
+          else
+            git commit -m "update desk page [skip ci]"
+            git pull --rebase --autostash || true
+            git push
+          fi
