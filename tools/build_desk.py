@@ -78,6 +78,26 @@ def is_nocut(it):
     return bool(it.get("nc")) or "노컷" in (it.get("s") or "")
 
 
+def desk_assembly(pages):
+    """0-84: 국회 일정 띠 — 각 판 data.json의 asm(위원회·빼는 회의·본회의)을 PAGES 순서로 합치고 위원회마다 담당 기자(who)를 붙인다.
+    같은 위원회가 판마다 다른 exclude로 여러 번 나와도 그대로 싣는다 — 페이지가 위원회당 한 번만 부르고 판별로 걸러 담당자를 합친다
+    (예: 기후노동위 전체회의 = 양형욱·김동빈, 고용노동법안심사소위 = 김동빈). 국회 일정이 있는 판이 하나도 없으면 None."""
+    cs, plen = [], False
+    for _repo, who, _team, d in pages:
+        a = d.get("asm") or {}
+        plen = plen or bool(a.get("plenary"))
+        for c in a.get("committees") or []:
+            if c.get("name"):
+                cs.append({"name": c["name"], "short": c.get("short") or c["name"],
+                           "exclude": list(c.get("exclude") or []), "who": who})
+    if not cs and not plen:
+        return None
+    out = {"label": "국회 일정", "days": 14, "committees": cs}
+    if plen:
+        out["plenary"] = True
+    return out
+
+
 def build(pages, now):
     base = next((d for r, _w, _t, d in pages if r == "news-monitor"), pages[0][3])
     reports = []
@@ -170,8 +190,12 @@ def build(pages, now):
         reports.append({k: v for k, v in brep.items() if k not in ("segments", "all", "byline")}
                        | {"segments": segs, "all": all_out})
     last = max((d.get("last_seen") or "" for _r, _w, _t, d in pages), default="")
-    return {"generated": now.isoformat(), "last_seen": last, "reports": reports,
-            "src": [{"repo": r, "who": w, "team": t, "gen": d.get("generated", "")} for r, w, t, d in pages]}
+    out = {"generated": now.isoformat(), "last_seen": last, "reports": reports,
+           "src": [{"repo": r, "who": w, "team": t, "gen": d.get("generated", "")} for r, w, t, d in pages]}
+    asm = desk_assembly(pages)
+    if asm:
+        out["asm"] = asm
+    return out
 
 
 def main():
